@@ -1,0 +1,64 @@
+Private Sub Worksheet_Change(ByVal Target As Range)
+ 
+    Dim FilterCol As Integer
+    Dim FilterRange As Range
+    Dim CondtitionString As Variant
+    Dim Condition1 As String, Condition2 As String
+ 
+    If Intersect(Target, Range("conditions")) Is Nothing Then Exit Sub
+ 
+    On Error Resume Next
+    Application.ScreenUpdating = False
+     
+    'определяем диапазон данных списка
+    Set FilterRange = Target.Parent.AutoFilter.Range
+     
+    'считываем условия из всех измененных ячеек диапазона условий
+    For Each cell In Target.Cells
+        FilterCol = cell.Column - FilterRange.Columns(1).Column + 1
+         
+        If IsEmpty(cell) Then
+            Target.Parent.Range(FilterRange.Address).AutoFilter Field:=FilterCol
+        Else
+            If InStr(1, UCase(cell.Value), " ИЛИ ") > 0 Then
+                LogicOperator = xlOr
+                ConditionArray = Split(UCase(cell.Value), " ИЛИ ")
+            Else
+                If InStr(1, UCase(cell.Value), " ") > 0 Then
+                    LogicOperator = xlAnd
+                    ConditionArray = Split(UCase(cell.Value), " ")
+                Else
+                    ConditionArray = Array(cell.Text)
+                End If
+            End If
+            'формируем первое условие
+            If Left(ConditionArray(0), 1) = "<" Or Left(ConditionArray(0), 1) = ">" Then
+                Condition1 = ConditionArray(0)
+            Else
+                Condition1 = "*" & ConditionArray(0) & "*"
+            End If
+            'формируем второе условие - если оно есть
+            If UBound(ConditionArray) = 1 Then
+                If Left(ConditionArray(1), 1) = "<" Or Left(ConditionArray(1), 1) = ">" Then
+                    Condition2 = ConditionArray(1)
+                Else
+                    Condition2 = "*" & ConditionArray(1) & "*"
+                End If
+            End If
+            'включаем фильтрацию
+            If UBound(ConditionArray) = 0 Then
+                Target.Parent.Range(FilterRange.Address).AutoFilter Field:=FilterCol, Criteria1:=Condition1
+            Else
+                Target.Parent.Range(FilterRange.Address).AutoFilter Field:=FilterCol, Criteria1:=Condition1, _
+                    Operator:=LogicOperator, Criteria2:=Condition2
+            End If
+        End If
+    Next cell
+     
+    Set FilterRange = Nothing
+    Application.ScreenUpdating = True
+End Sub
+
+
+
+
